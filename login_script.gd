@@ -23,7 +23,8 @@ func _on_http_request_request_completed(result: int, response_code: int, headers
 	# If response is ok
 	if (response_code == 200):
 		#ser authenticated
-		print("Auth")
+		Global.email = response.email
+		print(Global.email)
 		get_tree().change_scene_to_file("res://main.tscn")
 	else:
 		# Failed to authenticate
