@@ -1,20 +1,21 @@
 extends Node2D
 
-
+#tdlpdj 3
 const COLLISION_MASK_CARD = 1
 var card_being_dragged
 var screen_size
-
+#guarda tamaño dela ventana asi la carta no se saldra  de la pantalla
 func _ready() -> void:
 	screen_size = get_viewport_rect().size
 
+#click derecho
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	if card_being_dragged:
 		var mouse_pos = get_global_mouse_position()
 		card_being_dragged.position = Vector2(clamp(mouse_pos.x, 0, screen_size.x),
 			clamp(mouse_pos.y, 0, screen_size.y))
-	
+	#click izquierdo
 
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -25,7 +26,7 @@ func _input(event):
 		else:
 			card_being_dragged = null
 # Called when the node enters the scene tree for the first time.
-
+#parametros de busqueda
 
 func raycast_check_for_card():
 	var space_state = get_world_2d().direct_space_state
