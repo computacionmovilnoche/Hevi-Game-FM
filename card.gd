@@ -3,6 +3,9 @@ extends Node2D
 signal hovered
 signal hovered_off
 
+var in_slot = false
+#saber si una carta esta en un slot
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.
