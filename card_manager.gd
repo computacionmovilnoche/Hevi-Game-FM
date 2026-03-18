@@ -2,6 +2,7 @@ extends Node2D
 
 #tdlpdj 3
 const COLLISION_MASK_CARD = 1
+const COLLISION_MASK_CARD_slot = 2
 var card_being_dragged
 var screen_size
 var is_hovering_o_card
@@ -40,6 +41,14 @@ func start_drag(card):
 func finish_drag():
 	if card_being_dragged:
 		card_being_dragged.scale = Vector2(2.1, 2.1)
+		var card_slot_found = raycast_check_for_card_slot()
+		if card_slot_found and not card_slot_found.card_in_slot:
+			card_being_dragged.position = card_slot_found.position
+			card_being_dragged.get_node("Area2D/CollisionShape2D").disabled = true
+			#indica cuando la carta se puso correctamente en un slot
+			card_being_dragged.in_slot = true 
+			card_being_dragged.scale = Vector2(1.7, 1.7)
+			card_slot_found.card_in_slot = true
 		card_being_dragged = null
 	
 
@@ -81,6 +90,19 @@ func raycast_check_for_card():
 	if result.size() > 0:
 		return get_card_with_highest_z_index(result)
 	return null
+
+func raycast_check_for_card_slot():
+	var space_state = get_world_2d().direct_space_state
+	var parameters = PhysicsPointQueryParameters2D.new()
+	parameters.position = get_global_mouse_position()
+	parameters.collide_with_areas = true
+	parameters.collision_mask = COLLISION_MASK_CARD_slot
+	var result = space_state.intersect_point(parameters)
+	if result.size() > 0:
+		
+		return result[0].collider.get_parent()
+	return null
+
 func get_card_with_highest_z_index(cards):
 	#esta funcion es para saber que carta esta siendo seleccionada, para pasar alfrente
 	var highest_z_card = cards[0].collider.get_parent()
