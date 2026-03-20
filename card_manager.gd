@@ -6,10 +6,12 @@ const COLLISION_MASK_CARD_slot = 2
 var card_being_dragged
 var screen_size
 var is_hovering_o_card
+var player_hand_reference
 
 #guarda tamaño dela ventana asi la carta no se saldra  de la pantalla
 func _ready() -> void:
 	screen_size = get_viewport_rect().size
+	player_hand_reference = $"../PlayerHand"
     for child in get_children():
 		if child.has_signal("hovered"):
 			connect_card_signals(child)
@@ -44,11 +46,14 @@ func finish_drag():
 		var card_slot_found = raycast_check_for_card_slot()
 		if card_slot_found and not card_slot_found.card_in_slot:
 			card_being_dragged.position = card_slot_found.position
+			player_hand_reference.remove_card_from_hand(card_being_dragged)
 			card_being_dragged.get_node("Area2D/CollisionShape2D").disabled = true
 			#indica cuando la carta se puso correctamente en un slot
 			card_being_dragged.in_slot = true 
 			card_being_dragged.scale = Vector2(1.7, 1.7)
 			card_slot_found.card_in_slot = true
+		else:
+			player_hand_reference.add_card_to_hand(card_being_dragged)
 		card_being_dragged = null
 	
 
