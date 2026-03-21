@@ -3,6 +3,9 @@ extends Node2D
 #tdlpdj 3
 const COLLISION_MASK_CARD = 1
 const COLLISION_MASK_CARD_slot = 2
+const DEFAULT_CARD_MOVE_SPEED = 0.1
+const CARD_BASE_SCALE = Vector2(2.8, 2.8)
+
 var card_being_dragged
 var screen_size
 var is_hovering_o_card
@@ -12,6 +15,7 @@ var player_hand_reference
 func _ready() -> void:
 	screen_size = get_viewport_rect().size
 	player_hand_reference = $"../PlayerHand"
+	$"../InputManager".connect("left_mouse_button_released", on_left_click_released)
     for child in get_children():
 		if child.has_signal("hovered"):
 			connect_card_signals(child)
@@ -25,14 +29,7 @@ func _process(delta: float) -> void:
 			clamp(mouse_pos.y, 0, screen_size.y))
 	#click izquierdo
 
-func _input(event):
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			var card = raycast_check_for_card()
-			if card:
-				start_drag(card)
-		else:
-			finish_drag()
+#se paso a deck.gd
 	
 # Called when the node enters the scene tree for the first time.
 func start_drag(card):
@@ -42,7 +39,7 @@ func start_drag(card):
 
 func finish_drag():
 	if card_being_dragged:
-		card_being_dragged.scale = Vector2(2.1, 2.1)
+		card_being_dragged.scale = CARD_BASE_SCALE
 		var card_slot_found = raycast_check_for_card_slot()
 		if card_slot_found and not card_slot_found.card_in_slot:
 			card_being_dragged.position = card_slot_found.position
@@ -50,10 +47,10 @@ func finish_drag():
 			card_being_dragged.get_node("Area2D/CollisionShape2D").disabled = true
 			#indica cuando la carta se puso correctamente en un slot
 			card_being_dragged.in_slot = true 
-			card_being_dragged.scale = Vector2(1.7, 1.7)
+			card_being_dragged.scale = CARD_BASE_SCALE * 0.55
 			card_slot_found.card_in_slot = true
 		else:
-			player_hand_reference.add_card_to_hand(card_being_dragged)
+			player_hand_reference.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
 		card_being_dragged = null
 	
 
@@ -78,10 +75,10 @@ func on_hovered_off_card(card):
 
 func highlight_card(card, hovered):
 	if hovered:
-		card.scale = Vector2(2.1, 2.1)
+		card.scale = CARD_BASE_SCALE * 1.1
 		card.z_index = 2
 	else:
-		card.scale = Vector2(2, 2)
+		card.scale = CARD_BASE_SCALE
 		card.z_index = 1
 #parametros de busqueda
 
