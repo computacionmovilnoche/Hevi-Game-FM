@@ -29,6 +29,6 @@ func draw_card():
 	$RichTextLabel.text = str(player_deck.size())
 	var card_scene = preload(card_scene_path)
 	var new_card = card_scene.instantiate() 
-	$"../Card Manager".add_child(new_card)
-	new_card.name = "card"
+	new_card.scale = $"../Card Manager".CARD_BASE_SCALE
+	$"../Card Manager".connect_card_signals(new_card)
 	$"../PlayerHand".add_card_to_hand(new_card, CARD_DRAW_SPEED)
