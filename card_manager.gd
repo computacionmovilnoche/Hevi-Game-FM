@@ -35,6 +35,7 @@ func _process(delta: float) -> void:
 func start_drag(card):
 	card_being_dragged = card
 	card.scale = Vector2(2, 2)
+	toggle_slots_visibility(true)
 	
 
 func finish_drag():
@@ -51,9 +52,14 @@ func finish_drag():
 			card_slot_found.card_in_slot = true
 		else:
 			player_hand_reference.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+		toggle_slots_visibility(false)
 		card_being_dragged = null
 	
-
+func toggle_slots_visibility(visible):
+	for child in get_parent().get_children():
+		if child.has_method("get") and child.get("card_in_slot") != null:
+			if not child.card_in_slot:
+				child.visible = visible
 
 func connect_card_signals(card):
 	card.connect("hovered", on_hovered_over_card)
