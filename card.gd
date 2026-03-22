@@ -3,6 +3,10 @@ extends Node2D
 signal hovered
 signal hovered_off
 
+#para saber si se le esta haciendo CLICK
+signal card_clicked
+var card_preview_reference
+
 var in_slot = false
 #saber si una carta esta en un slot
 
@@ -26,3 +30,8 @@ func _on_area_2d_mouse_entered() -> void:
 
 func _on_area_2d_mouse_exited() -> void:
 	emit_signal("hovered_off", self)
+
+func _on_area_2d_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed and in_slot:
+			card_preview_reference.show_preview(self)
