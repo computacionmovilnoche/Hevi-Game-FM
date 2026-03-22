@@ -1,0 +1,24 @@
+extends Node2D
+
+@onready var background = $Background      # ColorRect negro transparente
+@onready var card_display = $CardDisplay   # TextureRect o Sprite2D
+
+func _ready() -> void:
+	visible = false
+	var screen_size = get_viewport_rect().size
+	background.scale = Vector2(25 ,25)
+	background.color = Color(0.0, 0.0, 0.0, 0.737)  # Negro 70% opaco
+	card_display.position = screen_size / 2
+
+func show_preview(card):
+	visible = true
+	# Copia la textura de la carta
+	card_display.texture = card.get_node("CardImage").texture
+
+func hide_preview():
+	visible = false
+
+func _input(event):
+	if visible and event is InputEventMouseButton:
+		if event.pressed:
+			hide_preview()
