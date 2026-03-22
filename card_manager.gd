@@ -11,10 +11,19 @@ var screen_size
 var is_hovering_o_card
 var player_hand_reference
 
+#deteccion de click o mantener presionado
+const CLICK_THRESHOLD = 0.2
+var click_timer = 0.0
+var is_dragging = false
+var card_preview_reference
+#-------------
+
+
 #guarda tamaño dela ventana asi la carta no se saldra  de la pantalla
 func _ready() -> void:
 	screen_size = get_viewport_rect().size
 	player_hand_reference = $"../PlayerHand"
+	card_preview_reference = $"../CanvasLayer/CardPreview"
 	$"../InputManager".connect("left_mouse_button_released", on_left_click_released)
     for child in get_children():
 		if child.has_signal("hovered"):
@@ -24,6 +33,9 @@ func _ready() -> void:
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	if card_being_dragged:
+		click_timer += delta
+		if click_timer > CLICK_THRESHOLD:
+			is_dragging = true
 		var mouse_pos = get_global_mouse_position()
 		card_being_dragged.position = Vector2(clamp(mouse_pos.x, 0, screen_size.x),
 			clamp(mouse_pos.y, 0, screen_size.y))
@@ -34,7 +46,9 @@ func _process(delta: float) -> void:
 # Called when the node enters the scene tree for the first time.
 func start_drag(card):
 	card_being_dragged = card
-	card.scale = Vector2(2, 2)
+	click_timer = 0.0
+	is_dragging = false
+	card.scale = CARD_BASE_SCALE
 	toggle_slots_visibility(true)
 	
 
@@ -45,11 +59,13 @@ func finish_drag():
 		if card_slot_found and not card_slot_found.card_in_slot:
 			card_being_dragged.position = card_slot_found.position
 			player_hand_reference.remove_card_from_hand(card_being_dragged)
-			card_being_dragged.get_node("Area2D/CollisionShape2D").disabled = true
+			card_being_dragged.get_node("Area2D").collision_layer = 8
+			card_being_dragged.card_preview_reference = card_preview_reference
 			#indica cuando la carta se puso correctamente en un slot
 			card_being_dragged.in_slot = true 
 			card_being_dragged.scale = CARD_BASE_SCALE * 0.55
 			card_slot_found.card_in_slot = true
+			card_being_dragged.card_preview_reference = card_preview_reference
 		else:
 			player_hand_reference.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
 		toggle_slots_visibility(false)
@@ -64,6 +80,18 @@ func toggle_slots_visibility(visible):
 func connect_card_signals(card):
 	card.connect("hovered", on_hovered_over_card)
 	card.connect("hovered_off", on_hovered_off_card)
+
+func on_left_click_released():
+	if card_being_dragged:
+		if not is_dragging:
+			# Fue un click corto → mostrar preview
+			toggle_slots_visibility(false)
+			player_hand_reference.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+			card_being_dragged.scale = CARD_BASE_SCALE
+			card_preview_reference.show_preview(card_being_dragged)
+			card_being_dragged = null
+		else:
+			finish_drag()
 
 func on_hovered_over_card(card):
 	if !is_hovering_o_card:
