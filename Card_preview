@@ -4,9 +4,20 @@ extends Node2D
 @onready var card_display = $CardDisplay   # TextureRect o Sprite2D
 @onready var label_ataque = $LabelAtaque
 @onready var label_vida = $LabelVida
+@onready var animacion = $AnimationPlayer
+
+var animacion_timer
+var current_card = null
+
+#medir tiempo de click
+const CLICK_THRESHOLD = 0.2
+var click_timer_count = 0.0
+var is_pressing = false
 
 func _ready() -> void:
 	visible = false
+
+	animacion_timer = $AnimacionTimer
 	var screen_size = get_viewport_rect().size
 	background.scale = Vector2(25 ,25)
 	background.color = Color(0.0, 0.0, 0.0, 0.737)  # Negro 70% opaco
@@ -22,11 +33,50 @@ func show_preview(card):
 	visible = true
 	# Copia la textura de la carta
 	card_display.texture = card.get_node("CardImage").texture
+	animacion.play("Carta in")
+	if card.card_type == "Tropa":
+		label_ataque.visible = true
+		label_vida.visible= true
+		label_ataque.text = card.get_node("Ataque").text
+		label_vida.text = card.get_node("Vida").text
+	else:
+		label_ataque.visible = false
+		label_vida.visible= false
 
-func hide_preview():
+func hide_preview(new_card = null):
+	if new_card != null:
+		animacion.play("Carta out")
+		animacion_timer.start()
+		await animacion_timer.timeout
+		show_preview(new_card)
+		return
+	animacion.play("Carta out")
+	animacion_timer.start()
+	await animacion_timer.timeout
 	visible = false
+
+func _process(delta):
+	if is_pressing:
+		click_timer_count += delta
 
 func _input(event):
 	if visible and event is InputEventMouseButton:
 		if event.pressed:
-			hide_preview()
+			is_pressing = true
+			click_timer_count = 0.0
+			animacion.play("Carta out")
+			animacion_timer.start()
+			await animacion_timer.timeout
+			visible = false
+		else:
+			is_pressing = false
+			if click_timer_count < CLICK_THRESHOLD:
+				# Verifica si se tocó otra carta
+				var card_manager = get_node("../../Card Manager")
+				var touched_card = card_manager.raycast_check_for_card()
+				if touched_card != null:
+					# Se tocó otra carta
+					hide_preview(touched_card)
+				else:
+					# Se tocó fuera
+					hide_preview()
