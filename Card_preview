@@ -2,6 +2,8 @@ extends Node2D
 
 @onready var background = $Background      # ColorRect negro transparente
 @onready var card_display = $CardDisplay   # TextureRect o Sprite2D
+@onready var label_ataque = $LabelAtaque
+@onready var label_vida = $LabelVida
 
 func _ready() -> void:
 	visible = false
@@ -9,6 +11,12 @@ func _ready() -> void:
 	background.scale = Vector2(25 ,25)
 	background.color = Color(0.0, 0.0, 0.0, 0.737)  # Negro 70% opaco
 	card_display.position = screen_size / 2
+
+	#ver datos como ataque y vida
+	label_ataque.position = screen_size / 2 + Vector2(-215, 180)
+	label_vida.position = screen_size / 2 + Vector2(155, 180)
+	label_ataque.add_theme_font_size_override("normal_font_size", 85)
+	label_vida.add_theme_font_size_override("normal_font_size", 85)
 
 func show_preview(card):
 	visible = true
