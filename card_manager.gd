@@ -66,9 +66,17 @@ func start_drag(card):
 
 func finish_drag():
 	if card_being_dragged:
+		var battle_manager = $"../BattleManager"
 		card_being_dragged.scale = CARD_BASE_SCALE
 		var card_slot_found = raycast_check_for_card_slot()
 		var card_type = card_being_dragged.card_type
+
+		if battle_manager.is_opponent_turn:
+			player_hand_reference.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+			toggle_slots_visibility(card_type, false)
+			card_being_dragged = null
+			return
+
 		if card_slot_found and not card_slot_found.card_in_slot and card_type in card_slot_found.card_slot_type:
 			if (card_type == "Support_linea" or card_type == "Support_campo") and played_support_card:
 				print("Ya jugaste un support este turno")
