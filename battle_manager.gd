@@ -19,6 +19,8 @@ var starting_health = 20
 var player_health
 var opponent_health
 
+var is_opponent_turn = false
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -45,6 +47,13 @@ func _on_fin_turno_pressed() -> void:
 
 
 func opponent_turn():
+
+	is_opponent_turn = true
+	
+	var player_hand = $"../PlayerHand".player_hand
+	for card in player_hand:
+		card.modulate = Color(0.525, 0.525, 0.525, 1.0)
+
 	$"../Fin turno".disabled = true
 	$"../Fin turno".visible = false
 	
@@ -245,6 +254,11 @@ func wait(wait_time):
 
 func end_opponent_turn():
 	#fin turno
+	is_opponent_turn = false
+	var player_hand = $"../PlayerHand".player_hand
+	for card in player_hand:
+		card.modulate = Color(1, 1, 1, 1)
+
 	#reseteo robo de carta
 	$"../Deck".reset_draw()
 	$"../Card Manager".reset_played_support_card()
