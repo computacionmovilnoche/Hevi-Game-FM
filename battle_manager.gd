@@ -19,19 +19,41 @@ var starting_health = 20
 var player_health
 var opponent_health
 
-var is_opponent_turn = false
+var player_coins
+var opponent_coins
+var starting_coin = 0
 
+var is_opponent_turn = false
+@onready var animacion = $"../ManagerCost/Animacion/AnimationCost"
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-
-    player_health = starting_health
-	$"../HealthManager/PlayerHealth".text = str(player_health)
-	opponent_health = starting_health
-	$"../HealthManager/OpponentHealth".text = str(opponent_health)
 	battle_timer = $"../BattleTimer"
 	battle_timer.one_shot = true
 	battle_timer.wait_time = 1.0
+	player_health = starting_health
+	$"../HealthManager/PlayerHealth".text = str(player_health)
+	opponent_health = starting_health
+	$"../HealthManager/OpponentHealth".text = str(opponent_health)
+	await wait(1)
+	var coin = starting_coin + 1
+	$"../ManagerCost/Animacion/Costo".text = str(coin)
+	$"../ManagerCost/Animacion/Costo2".text = str(coin)
+	await wait(0.4)
+	animacion.play("both_coins")
+	await wait(0.5)
+	starting_coin = starting_coin +1
+	
+	
+	
+	player_coins = starting_coin
+	opponent_coins = starting_coin
+	
+	$"../ManagerCost/Costo".text = str(player_coins)
+	$"../ManagerCost/Costo2".text = str(opponent_coins)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	$"../Card Manager".update_hand_card_colors()
 	empty_tropa_card_slot.append($"../Slots oponente manager/slot enemigo tropa/EnemyCardSlot")
 	empty_tropa_card_slot.append($"../Slots oponente manager/slot enemigo tropa/EnemyCardSlot2")
 	empty_tropa_card_slot.append($"../Slots oponente manager/slot enemigo tropa/EnemyCardSlot3")
@@ -220,16 +242,31 @@ func try_play_card():
 	for card in opponent_hand:
 		if card.card_type == "Tropa":
 			tropa_cards.append(card)
-	
-	#slot random vacio para jugar una carta
-	ramdom_empty_tropa_card_slot = empty_tropa_card_slot[randi_range(0,empty_tropa_card_slot.size()-1)]
-	empty_tropa_card_slot.erase(ramdom_empty_tropa_card_slot)
-	
-	#jugar carta con la mayor fuerza
-	var card_with_highest_atk = tropa_cards[0]
+
+	# Filtra cartas que el oponente puede pagar
+	var affordable_cards = []
 	for card in tropa_cards:
+		if card.Costo <= opponent_coins:  # ← Verifica si puede pagarla
+			affordable_cards.append(card)
+
+	# Si no puede pagar ninguna carta termina el turno
+	if affordable_cards.size() == 0:
+		return
+
+
+	
+	ramdom_empty_tropa_card_slot = empty_tropa_card_slot[randi_range(0, empty_tropa_card_slot.size()-1)]
+	empty_tropa_card_slot.erase(ramdom_empty_tropa_card_slot)
+
+	# Jugar carta con mayor ataque que pueda pagar
+	var card_with_highest_atk = affordable_cards[0]
+	for card in affordable_cards:
 		if card.Ataque > card_with_highest_atk.Ataque:
 			card_with_highest_atk = card
+
+	# Descuenta el costo
+	opponent_coins -= card_with_highest_atk.Costo
+	$"../ManagerCost/Costo2".text = str(opponent_coins)
 			
 	var tween = get_tree().create_tween()
 	tween.tween_property(card_with_highest_atk, "position", ramdom_empty_tropa_card_slot.position, speed)
@@ -255,12 +292,44 @@ func wait(wait_time):
 func end_opponent_turn():
 	#fin turno
 	is_opponent_turn = false
-	var player_hand = $"../PlayerHand".player_hand
+	var player_hand = $"../Responsive/HBoxContainer/PlayerHand".player_hand
 	for card in player_hand:
 		card.modulate = Color(1, 1, 1, 1)
-
 	#reseteo robo de carta
+	
+	starting_coin = starting_coin +1 
+	player_coins = starting_coin
+	opponent_coins = starting_coin
+	
+	$"../ManagerCost/Animacion/Costo".text = str(player_coins)
+	$"../ManagerCost/Animacion/Costo2".text = str(opponent_coins)
+	
+	animacion.play("both_coins")
+	await wait(0.5)
+
+	$"../ManagerCost/Costo".text = str(player_coins)
+	$"../ManagerCost/Costo2".text = str(opponent_coins)
+	await wait(0.5)
 	$"../Deck".reset_draw()
+	$"../Card Manager".update_hand_card_colors()
 	$"../Card Manager".reset_played_support_card()
 	$"../Fin turno".visible = true
 	$"../Fin turno".disabled = false
+
+
+#para jugar cartas cuando es tu turno
+
+func enable_emd_turn_button(is_enable):
+	if is_enable:
+		var player_hand = $"../Responsive/HBoxContainer/PlayerHand".player_hand
+		$"../Card Manager".update_hand_card_colors()
+		$"../Fin turno".visible = true
+		$"../Fin turno".disabled = false
+		
+		
+	else:
+		var player_hand = $"../Responsive/HBoxContainer/PlayerHand".player_hand
+		for card in player_hand:
+			card.modulate = Color(0.525, 0.525, 0.525, 1.0)
+		$"../Fin turno".visible = false
+		$"../Fin turno".disabled = true
