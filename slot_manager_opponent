@@ -1,0 +1,31 @@
+extends Node2D
+
+const SLOT_COUNT     = 5
+const ORIGINAL_WIDTH = 175.0
+
+
+func _ready() -> void:
+	_place_slots()
+
+func _place_slots() -> void:
+	var screen       = LayoutManager.screen_size
+	var usable_width = screen.x * 0.88
+	var slot_width   = usable_width / SLOT_COUNT
+	var new_scale    = (slot_width / ORIGINAL_WIDTH) * 0.92
+	var gap          = LayoutManager.tropa_slot_gap_x
+
+	# Ancho total real = (slot_width + gap) * cantidad de slots - el gap del último
+	var total_width = (slot_width + gap) * SLOT_COUNT - gap
+
+	# start_x centrado en pantalla
+	var start_x = (screen.x - total_width) / 2.0
+
+	var container = get_children()[0]
+	var slots     = container.get_children()
+
+	for i in range(slots.size()):
+		var slot   = slots[i]
+		var slot_x = start_x + (slot_width + LayoutManager.tropa_slot_gap_x) * i + slot_width * 0.5
+		var offset_y = 0.0 if i == 0 else screen.y * 0.059
+		slot.position = Vector2(slot_x, LayoutManager.enemy_slots_y + offset_y)
+		slot.scale    = Vector2(new_scale, new_scale)
