@@ -45,7 +45,46 @@ func draw_card():
 	new_card.name = "card"
 	new_card.get_node("AnimationPlayer").play("card_flip")
 
-
+func draw_specific_card(card_name):
+	var card_scene = preload(card_scene_path)
+	var new_card = card_scene.instantiate()
+	
+	var card_image_path = str("res://Cartas/" + card_name + "Card.png")
+	new_card.get_node("CardBack").visible = false
+	new_card.get_node("CardImage").texture = load(card_image_path)
+	
+	new_card.card_type = card_database_reference.Cards[card_name][2]
+	new_card.Ataque = card_database_reference.Cards[card_name][0]
+	new_card.Costo = card_database_reference.Cards[card_name][5]
+	
+	if new_card.card_type == "Tropa":
+		if new_card.Ataque == 0:
+			new_card.get_node("Ataque").visible= false
+		else:
+			new_card.get_node("Ataque").text = str(new_card.Ataque)
+		
+		new_card.Vida = card_database_reference.Cards[card_name][1]
+		
+		new_card.get_node("Vida").text = str(new_card.Vida)
+		new_card.get_node("Habilidad").text = str(card_database_reference.Cards[card_name][3])
+		new_card.get_node("Costo").text = str(new_card.Costo)
+	else:
+		new_card.get_node("Ataque").visible= false
+		new_card.get_node("Vida").visible= false
+		var new_card_ability_script_path = card_database_reference.Cards[card_name][4]
+		if new_card_ability_script_path:
+			new_card.Habilidad_script = load(new_card_ability_script_path).new()
+		new_card.Habilidad = card_database_reference.Cards[card_name][3]
+		new_card.get_node("Costo").text = str(new_card.Costo)
+		new_card.get_node("Habilidad").text = str(card_database_reference.Cards[card_name][3])
+	
+	$"../Card Manager".add_child(new_card)
+	new_card.name = card_name
+	new_card.scale = $"../Card Manager".CARD_BASE_SCALE
+	$"../Card Manager".connect_card_signals(new_card)
+	$"../Responsive/HBoxContainer/PlayerHand".add_card_to_hand(new_card, CARD_DRAW_SPEED)
+	player_deck.shuffle()
+	new_card.get_node("AnimationPlayer").play("card_flip")
 
 
 
