@@ -19,9 +19,9 @@ var deck_to_edit = ""
 
 func _ready():
 	load_all()
-	if deck_to_edit != "":
-		current_deck_name = deck_to_edit
-		deck_to_edit = ""
+	if Global.deck_to_edit != "":
+		current_deck_name = Global.deck_to_edit
+		Global.deck_to_edit = ""
 		show_panel(panel_editor)
 		setup_editor()
 	else:
@@ -35,12 +35,17 @@ func show_panel(panel):
 	panel.visible = true
 
 func setup_editor():
-	# Será expandida en el Paso B cuando PanelEditor tenga sus nodos
-	print("setup_editor llamado — personaje: ", panel_personaje.selected_character)
-	print("setup_editor llamado — deck: ", current_deck_name)
 	var character_name = panel_personaje.selected_character
+	
+	if character_name == "" and current_deck_name != "":
+		character_name = all_decks[current_deck_name].get("character", "")
+		panel_personaje.selected_character = character_name
+	
+	if character_name == "":
+		print("Error: no hay personaje seleccionado")
+		return
+	
 	panel_editor.setup(character_name, current_deck_name)
-	panel_editor.setup(panel_personaje.selected_character, current_deck_name)
 
 
 
@@ -50,7 +55,8 @@ func create_deck(character_name, custom_name = ""):
 	var name = custom_name if custom_name != "" else _generate_name()
 	all_decks[name] = {
 		"character": character_name,
-		"cards": []
+		"cards": [],
+		"created_at": Time.get_unix_time_from_system()
 	}
 	current_deck_name = name
 	save_all()
