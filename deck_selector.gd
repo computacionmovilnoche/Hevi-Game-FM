@@ -26,6 +26,33 @@ var has_dragged = false
 @onready var scroll_container = $ScrollContainer
 @onready var exit_button = $Responsive/HBoxContainer/Exit
 
+
+
+# panel para el Deck Preview
+@onready var deck_preview_panel = $DeckPreviewPanel
+@onready var drag_handle = $DeckPreviewPanel/DragHandle
+@onready var favorito_button = $DeckPreviewPanel/FavoritoButton
+@onready var delete_button = $DeckPreviewPanel/DeleteButton
+@onready var deck_image_node = $DeckPreviewPanel/DeckImage
+@onready var caja_cartas = $DeckPreviewPanel/DeckImage/CajaCartas
+@onready var personaje_logo = $DeckPreviewPanel/DeckImage/PersonajeLogo
+@onready var bando_icon = $DeckPreviewPanel/DeckImage/BandoIcon
+@onready var deck_name_label = $DeckPreviewPanel/DeckName
+@onready var card_count_label = $DeckPreviewPanel/CardCount
+@onready var valid_label = $DeckPreviewPanel/ValidLabel
+@onready var activar_button = $DeckPreviewPanel/ActivarButton
+@onready var editar_button = $DeckPreviewPanel/EditarButton
+@onready var cards_preview = $DeckPreviewPanel/CardsPreview
+@onready var cards_grid = $DeckPreviewPanel/CardsPreview/CardsGrid
+@onready var fondo_panel = $DeckPreviewPanel/FondoPanel
+
+#-- para arrastrar el menu
+var is_dragging_panel = false
+var panel_drag_start_y = 0.0
+var panel_start_pos_y = 0.0
+const PANEL_Y_COLLAPSED = 1920.0
+const PANEL_Y_MIN = 200.0  # hasta donde suben los filtros
+#--
 func _ready():
 	load_decks()
 	
@@ -45,6 +72,23 @@ func _ready():
 		
 	populate_decks()
 
+	# DeckPreviewPanel
+	deck_preview_panel.position.y = PANEL_Y_COLLAPSED
+	
+	drag_handle.button_down.connect(_on_drag_handle_down)
+	favorito_button.pressed.connect(_on_favorito_pressed)
+	delete_button.pressed.connect(_on_delete_pressed)
+	activar_button.pressed.connect(_on_activar_pressed)
+	editar_button.pressed.connect(_on_editar_pressed)
+	
+	await get_tree().process_frame
+	cards_preview.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	cards_preview.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	cards_preview.get_v_scroll_bar().modulate = Color(0, 0, 0, 0)
+	cards_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cards_grid.custom_minimum_size.x = cards_preview.size.x
+
+
 func _input(event):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and scroll_container.get_global_rect().has_point(event.global_position):
@@ -61,6 +105,29 @@ func _input(event):
 			has_dragged = true
 			scroll_container.scroll_vertical = scroll_start_y + delta
 			get_viewport().set_input_as_handled()
+
+	#drag del panel del deck
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed and scroll_container.get_global_rect().has_point(event.global_position):
+			is_dragging_scroll = true
+			has_dragged = false
+			drag_start_y = event.global_position.y
+			scroll_start_y = scroll_container.scroll_vertical
+		elif not event.pressed:
+			is_dragging_scroll = false
+			is_dragging_panel = false
+	
+	if event is InputEventMouseMotion:
+		if is_dragging_scroll:
+			var delta = drag_start_y - event.global_position.y
+			if abs(delta) > 10.0:
+				scroll_container.scroll_vertical = scroll_start_y + delta
+				get_viewport().set_input_as_handled()
+		
+		if is_dragging_panel:
+			var delta = event.global_position.y - panel_drag_start_y
+			var new_y = clamp(panel_start_pos_y + delta, PANEL_Y_MIN, PANEL_Y_COLLAPSED)
+			deck_preview_panel.position.y = new_y
 
 func load_decks():
 	if not FileAccess.file_exists(SAVE_PATH):
@@ -123,7 +190,12 @@ func populate_decks():
 				continue
 		filtered.append(deck_name)
 	
-	filtered.reverse()
+	# Ordena de más reciente a más antiguo
+	filtered.sort_custom(func(a, b):
+		var time_a = all_decks[a].get("created_at", 0)
+		var time_b = all_decks[b].get("created_at", 0)
+		return time_a > time_b
+	)
 	
 	var i = 0
 	var fila = 0
@@ -279,9 +351,178 @@ func _create_deck_button(deck_name: String) -> Button:
 	
 	
 	btn.pressed.connect(func():
-		print("deck seleccionado: ", deck_name)
 		previewing_deck_name = deck_name
 		populate_decks()
-		#show_deck_preview(deck_name)
+		show_deck_preview(deck_name)
 	)
 	return btn
+
+#parte del deck preview
+
+func show_deck_preview(deck_name: String):
+	previewing_deck_name = deck_name
+	selected_deck_name = deck_name
+	populate_decks()
+	
+	var deck_data = all_decks[deck_name]
+	var character_name = deck_data.get("character", "")
+	var bando = ""
+	if character_name != "" and character_name in CharacterDatabase.Characters:
+		bando = CharacterDatabase.Characters[character_name]["bando"]
+	
+	var bando_assets = CharacterDatabase.BandoAssets.get(bando, CharacterDatabase.BandoAssets["Villano"])
+	
+	# Fondo del panel según bando
+	if bando == "Heroe":
+		fondo_panel.texture = load("res://UI/Mazos/VisualsDecks/FondoPanelHeroe.png")
+	else:
+		fondo_panel.texture = load("res://UI/Mazos/VisualsDecks/FondoPanelVillano.png")
+	
+	# DeckImage
+	personaje_logo.texture = load(CharacterDatabase.Characters[character_name]["logo"]) if character_name in CharacterDatabase.Characters else null
+	bando_icon.texture = load(bando_assets["icono_cartas"])
+	caja_cartas.texture = load(bando_assets["caja"])
+	
+	# Info
+	deck_name_label.text = deck_name
+	var cards = deck_data.get("cards", [])
+	card_count_label.text = "%d / 40" % cards.size()
+	
+	var valid = is_deck_valid(deck_name)
+	if valid:
+		valid_label.text = "✓ VALIDO"
+		valid_label.add_theme_color_override("font_color", Color(0.2, 0.9, 0.2))
+	else:
+		valid_label.text = "✗ BORRADOR"
+		valid_label.add_theme_color_override("font_color", Color(0.9, 0.2, 0.2))
+	
+	# Botón activar solo si es válido
+	activar_button.disabled = not valid
+	
+	# Cartas del deck
+	populate_cards_preview(deck_name)
+	
+	# Sube el panel
+	var tween = create_tween()
+	tween.tween_property(deck_preview_panel, "position:y", 900.0, 0.3).set_ease(Tween.EASE_OUT)
+
+func populate_cards_preview(deck_name: String):
+	for child in cards_grid.get_children():
+		child.queue_free()
+	
+	var cards = all_decks[deck_name].get("cards", [])
+	
+	# Agrupa por nombre con conteo
+	var card_counts = {}
+	for card_name in cards:
+		card_counts[card_name] = card_counts.get(card_name, 0) + 1
+	
+	for card_name in card_counts:
+		var btn = Button.new()
+		btn.custom_minimum_size = Vector2(180, 220)
+		btn.flat = true
+		btn.mouse_filter = Control.MOUSE_FILTER_PASS
+		
+		var tex = TextureRect.new()
+		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tex.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var card_image_path = "res://Cartas/%sCard.png" % card_name
+		if ResourceLoader.exists(card_image_path):
+			tex.texture = load(card_image_path)
+		btn.add_child(tex)
+		
+		# Círculo con conteo
+		var circle = Panel.new()
+		circle.custom_minimum_size = Vector2(40, 40)
+		circle.position = Vector2(90, 170)
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(0, 0, 0, 0.8)
+		style.corner_radius_top_left = 20
+		style.corner_radius_top_right = 20
+		style.corner_radius_bottom_left = 20
+		style.corner_radius_bottom_right = 20
+		circle.add_theme_stylebox_override("panel", style)
+		var count_label = Label.new()
+		count_label.text = str(card_counts[card_name])
+		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		count_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		circle.add_child(count_label)
+		btn.add_child(circle)
+		
+		cards_grid.add_child(btn)
+
+# ── DRAG DEL PANEL ────────────────────────────────
+
+func _on_drag_handle_down():
+	is_dragging_panel = true
+	panel_drag_start_y = get_viewport().get_mouse_position().y
+	panel_start_pos_y = deck_preview_panel.position.y
+
+func _on_favorito_pressed():
+	if selected_deck_name == "":
+		return
+	var current = all_decks[selected_deck_name].get("favorito", false)
+	all_decks[selected_deck_name]["favorito"] = not current
+	_save_decks()
+	favorito_button.text = "★" if not current else "☆"
+
+func _on_delete_pressed():
+	if selected_deck_name == "":
+		return
+	_show_confirm_dialog(
+		"¿Eliminar este mazo? Esta acción no se puede deshacer.",
+		func():
+			_delete_deck(selected_deck_name)
+			selected_deck_name = ""
+			previewing_deck_name = ""
+			var tween = create_tween()
+			tween.tween_property(deck_preview_panel, "position:y", PANEL_Y_COLLAPSED, 0.3)
+			populate_decks()
+	)
+
+func _on_activar_pressed():
+	if selected_deck_name == "" or not is_deck_valid(selected_deck_name):
+		return
+	# Desactiva el anterior
+	all_decks["_selected"] = selected_deck_name
+	_save_decks()
+	populate_decks()
+
+func _on_editar_pressed():
+	if selected_deck_name == "":
+		return
+	# Guarda el deck a editar en Global para que DeckBuilder lo recoja
+	Global.deck_to_edit = selected_deck_name
+	get_tree().change_scene_to_file("res://Scenes/DeckBuilder.tscn")
+
+func _save_decks():
+	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(all_decks))
+		file.close()
+
+func _delete_deck(deck_name: String):
+	if deck_name in all_decks:
+		all_decks.erase(deck_name)
+		_save_decks()
+
+func _show_confirm_dialog(message: String, action: Callable):
+	var dialog = $ConfirmDialog
+	dialog.visible = true
+	dialog.get_node("Control/Message").text = message
+	var confirm_btn = dialog.get_node("Control/ConfirmarButton")
+	var cancel_btn = dialog.get_node("Control/CancelarButton")
+	for c in confirm_btn.pressed.get_connections():
+		confirm_btn.pressed.disconnect(c.callable)
+	for c in cancel_btn.pressed.get_connections():
+		cancel_btn.pressed.disconnect(c.callable)
+	confirm_btn.pressed.connect(func():
+		dialog.visible = false
+		action.call()
+	)
+	cancel_btn.pressed.connect(func():
+		dialog.visible = false
+	)
